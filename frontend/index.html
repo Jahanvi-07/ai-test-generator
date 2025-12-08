@@ -16,7 +16,7 @@
                 AI Test Generator
             </a>
             <ul class="nav-links">
-                <!--<li><a href="#features">Features</a></li>-->
+                <li><a href="#features">Features</a></li>
                 <li><a href="#generator">Generator</a></li>
                 <li><a href="#about">About</a></li>
                 <li><a href="signup.html" class="btn btn-secondary btn-sm">Sign Up</a></li>
@@ -114,10 +114,10 @@
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--spacing-lg);">
                         <div class="form-group">
                             <label class="form-label">Test Title</label>
-                            <input type="text" class="form-input" id="testTitle" placeholder="e.g., Physics Mid-Term Exam" required>
+                            <input type="text" class="form-input" id="testTitle" placeholder="eg., Mid-Term Exam" required>
                         </div>
 
-                        <!--<div class="form-group">
+                        <!--div class="form-group">
                             <label class="form-label">Subject</label>
                             <select class="form-select" id="subject" required>
                                 <option value="">Select Subject</option>
@@ -129,7 +129,7 @@
                                 <option value="english">English</option>
                                 <option value="geography">Geography</option>
                             </select>
-                        </div>-->
+                        </div-->
 
                         <div class="form-group">
                             <label class="form-label">Difficulty Level</label>
@@ -144,13 +144,13 @@
 
                         <div class="form-group">
                             <label class="form-label">Number of Questions</label>
-                            <input type="number" class="form-input" id="numQuestions" min="5" max="100" value="20" required>
+                            <input type="number" class="form-input" id="numQuestions" min="8" max="50" value="0" required>
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label">Topics to Cover</label>
-                        <textarea class="form-textarea" id="topics" placeholder="e.g., Thermodynamics, Wave Motion, Electricity" required></textarea>
+                        <textarea class="form-textarea" id="topics" placeholder="eg., Type Something...!" required></textarea>
                     </div>
 
                     <div class="form-group">
@@ -277,69 +277,113 @@
             }
         ];
 
-        function generateTest() {
-            const testTitle = document.getElementById('testTitle').value;
-            const difficulty = document.getElementById('difficulty').value;
-            const numQuestions = parseInt(document.getElementById('numQuestions').value);
-            const topics = document.getElementById('topics').value;
-
-            if (!testTitle || !difficulty || !topics) {
-                alert('Please fill in all fields.');
-                return;
+        function openLogin() {
+            document.getElementById('loginModal').style.display = 'flex';
         }
 
-    // Directly show preview
-    renderTestPreview(testTitle, difficulty, numQuestions, topics);
+        function closeLogin() {
+            document.getElementById('loginModal').style.display = 'none';
+        }
 
-    // Switch to Preview tab
-    switchTab({target: document.querySelector('.tab-btn:nth-child(2)')}, 'preview-tab');
-}
+        async function login() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
 
+            const res = await fetch('http://localhost:5000/api/auth/login', {
+                method: 'POST',
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password })
+            });
 
-            // Show success message
-            /*document.getElementById('successMsg').classList.add('show');
-            setTimeout(() => {
-                document.getElementById('successMsg').classList.remove('show');
-            }, 3000);*/
-            // Directly switch to preview after generation  
-            renderTestPreview(testTitle, subject, difficulty, numQuestions, topics);
-            switchTab({target: document.querySelector('.tab-btn:nth-child(2)')}, 'preview-tab');
+            const data = await res.json();
 
-            // Generate preview
-            renderTestPreview(testTitle, subject, difficulty, numQuestions, topics);
+            if (data.token) {
+                localStorage.setItem("token", data.token);
+                alert("Login successful!");
+                closeLogin();
+            } else {
+                alert(data.error || "Login failed");
+            }
+        }
 
-            // Switch to preview tab
-            document.getElementById('preview-tab').click();
-        
+        async function generateTest() {
+            const token = localStorage.getItem("token");
 
-        function renderTestPreview(testTitle, difficulty, numQuestions, topics) {
+            if (!token) {
+                alert("❗ You must log in first. Backend requires authentication.");
+                return;
+            }
+
+            const testData = {
+                title: document.getElementById('testTitle').value,
+                subject: document.getElementById('subject').value,
+                difficulty: document.getElementById('difficulty').value,
+                numQuestions: document.getElementById('numQuestions').value,
+                topics: document.getElementById('topics').value
+            };
+
+            try {
+                const response = await fetch("http://localhost:5000/api/tests/generate", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + token
+                    },
+                    body: JSON.stringify(testData)
+                });
+
+                const result = await response.json();
+                console.log(result);
+
+                if (!result.questions) {
+                    alert("Backend did not return questions.");
+                    return;
+                }
+
+                renderTestPreview(
+                    testData.title,
+                    testData.subject,
+                    testData.difficulty,
+                    testData.numQuestions,
+                    testData.topics,
+                    result.questions
+                );
+
+            } catch (error) {
+                console.error("Error connecting to backend:", error);
+                alert("Could not reach backend.");
+            }
+        }
+
+        function renderTestPreview(testTitle, subject, difficulty, numQuestions, topics) {
             const preview = document.getElementById('testPreview');
             const empty = document.getElementById('emptyPreview');
             const container = document.getElementById('questionsContainer');
 
+            // Update metadata
             document.getElementById('previewTestTitle').textContent = testTitle;
+            document.getElementById('previewSubject').textContent = subject.charAt(0).toUpperCase() + subject.slice(1);
             document.getElementById('previewTopics').textContent = topics;
             document.getElementById('previewDifficulty').textContent = difficulty.toUpperCase();
             document.getElementById('previewCount').textContent = numQuestions + ' Questions';
 
+            // Generate questions
             container.innerHTML = '';
-
-        for (let i = 0; i < numQuestions && i < sampleQuestions.length; i++) {
+            for (let i = 0; i < numQuestions && i < sampleQuestions.length; i++) {
                 const q = sampleQuestions[i];
                 const questionEl = document.createElement('div');
                 questionEl.className = 'test-question';
-        
+                
                 questionEl.innerHTML = `
                     <div class="test-question-title">Q${i + 1}. ${q.question}</div>
                     ${renderQuestionOptions(q)}
-        `           ;
+                `;
                 container.appendChild(questionEl);
-    }
+            }
 
-    preview.classList.remove('hidden');
-    empty.classList.add('hidden');
-}
-
+            preview.classList.remove('hidden');
+            empty.classList.add('hidden');
+        }
 
         function renderQuestionOptions(q) {
             if (q.type === 'MCQ') {
