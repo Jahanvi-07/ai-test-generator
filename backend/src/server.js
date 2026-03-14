@@ -1,6 +1,6 @@
 const path = require('path');
 // Load .env file from the backend directory
-require('dotenv').config({ path: path.join(__dirname, '../.env') });
+require('dotenv').config();
 const app = require('./app');
 const connectDB = require('./config/db');
 const User = require('./models/User');
