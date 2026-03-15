@@ -22,6 +22,7 @@ const start = async () => {
     }
     
     app.listen(PORT, () => {
+      console.log("Mongo URI:", process.env.MONGO_URI);
       console.log(`✅ Server running at http://localhost:${PORT}`);
       console.log(`🔑 Gemini API Key: ${process.env.GEMINI_API_KEY ? '✅ Loaded' : '❌ Missing'}`);
     });
